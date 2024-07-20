@@ -4,7 +4,7 @@ import "time"
 
 type Storage struct {
 	ID              uint      `json:"id" gorm:"primaryKey"`                        // unique key
-	UID             uint      `json:"uid"`                                         // user id
+	UserID          uint      `json:"userid"`                                      // user id
 	MountPath       string    `json:"mount_path" gorm:"unique" binding:"required"` // must be standardized
 	Order           int       `json:"order"`                                       // use to sort
 	Driver          string    `json:"driver"`                                      // driver used
