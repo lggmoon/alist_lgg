@@ -1,6 +1,7 @@
 name: auto changelog
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - '*'

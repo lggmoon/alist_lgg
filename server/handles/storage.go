@@ -21,7 +21,17 @@ func ListStorages(c *gin.Context) {
 	}
 	req.Validate()
 	log.Debugf("%+v", req)
-	storages, total, err := db.GetStorages(req.Page, req.PerPage)
+
+	user := c.MustGet("user").(*model.User)
+	var storages []model.Storage
+	var total int64
+	var err error
+	if user.IsAdmin() {
+		storages, total, err = db.GetStorages(req.Page, req.PerPage)
+	} else {
+		storages, total, err = db.GetStorages_user(user, req.Page, req.PerPage)
+	}
+
 	if err != nil {
 		common.ErrorResp(c, err, 500)
 		return
@@ -38,6 +48,8 @@ func CreateStorage(c *gin.Context) {
 		common.ErrorResp(c, err, 400)
 		return
 	}
+	user := c.MustGet("user").(*model.User)
+	req.UID = user.ID
 	if id, err := op.CreateStorage(c, req); err != nil {
 		common.ErrorWithDataResp(c, err, 500, gin.H{
 			"id": id,
@@ -49,12 +61,29 @@ func CreateStorage(c *gin.Context) {
 	}
 }
 
+func _check_user_storage(c *gin.Context, id uint) bool {
+	user := c.MustGet("user").(*model.User)
+	if !user.IsAdmin() {
+		sto, err := db.GetStorageById_user(user, uint(id))
+		if err == nil || sto.UID != user.ID {
+			common.ErrorResp(c, err, 500, true)
+			return false
+		}
+	}
+	return true
+}
+
 func UpdateStorage(c *gin.Context) {
 	var req model.Storage
 	if err := c.ShouldBind(&req); err != nil {
 		common.ErrorResp(c, err, 400)
 		return
 	}
+
+	if !_check_user_storage(c, req.ID) {
+		return
+	}
+
 	if err := op.UpdateStorage(c, req); err != nil {
 		common.ErrorResp(c, err, 500, true)
 	} else {
@@ -67,6 +96,9 @@ func DeleteStorage(c *gin.Context) {
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		common.ErrorResp(c, err, 400)
+		return
+	}
+	if !_check_user_storage(c, uint(id)) {
 		return
 	}
 	if err := op.DeleteStorageById(c, uint(id)); err != nil {
@@ -83,6 +115,9 @@ func DisableStorage(c *gin.Context) {
 		common.ErrorResp(c, err, 400)
 		return
 	}
+	if !_check_user_storage(c, uint(id)) {
+		return
+	}
 	if err := op.DisableStorage(c, uint(id)); err != nil {
 		common.ErrorResp(c, err, 500, true)
 		return
@@ -95,6 +130,9 @@ func EnableStorage(c *gin.Context) {
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		common.ErrorResp(c, err, 400)
+		return
+	}
+	if !_check_user_storage(c, uint(id)) {
 		return
 	}
 	if err := op.EnableStorage(c, uint(id)); err != nil {

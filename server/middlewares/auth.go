@@ -2,6 +2,7 @@ package middlewares
 
 import (
 	"crypto/subtle"
+	"strings"
 
 	"github.com/alist-org/alist/v3/internal/conf"
 	"github.com/alist-org/alist/v3/internal/model"
@@ -129,7 +130,8 @@ func Authn(c *gin.Context) {
 
 func AuthAdmin(c *gin.Context) {
 	user := c.MustGet("user").(*model.User)
-	if !user.IsAdmin() {
+	pass := !user.IsGuest() && (strings.HasPrefix(c.Request.URL.Path, "/@manage/storages") || strings.HasPrefix(c.Request.URL.Path, "/storages"))
+	if !pass && !user.IsAdmin() {
 		common.ErrorStrResp(c, "You are not an admin", 403)
 		c.Abort()
 	} else {
