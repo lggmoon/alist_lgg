@@ -56,6 +56,10 @@ func (u *User) IsAdmin() bool {
 	return u.Role == ADMIN
 }
 
+func (u *User) IsGeneral() bool {
+	return u.Role == GENERAL
+}
+
 func (u *User) ValidateRawPassword(password string) error {
 	return u.ValidatePwdStaticHash(StaticHash(password))
 }

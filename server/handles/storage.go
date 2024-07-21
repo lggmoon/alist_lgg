@@ -63,7 +63,7 @@ func CreateStorage(c *gin.Context) {
 
 func _check_user_storage(c *gin.Context, id uint) bool {
 	user := c.MustGet("user").(*model.User)
-	if !user.IsAdmin() {
+	if !user.IsGeneral() {
 		sto, err := db.GetStorageById_user(user, uint(id))
 		if err == nil || sto.UserID != user.ID {
 			common.ErrorResp(c, err, 500, true)
@@ -79,12 +79,11 @@ func UpdateStorage(c *gin.Context) {
 		common.ErrorResp(c, err, 400)
 		return
 	}
-
 	if !_check_user_storage(c, req.ID) {
 		return
 	}
-
 	if err := op.UpdateStorage(c, req); err != nil {
+		log.Info("update storage: UpdateStorage...", err)
 		common.ErrorResp(c, err, 500, true)
 	} else {
 		common.SuccessResp(c)

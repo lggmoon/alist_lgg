@@ -128,9 +128,29 @@ func Authn(c *gin.Context) {
 	c.Next()
 }
 
+func _genernal_pass(url string) bool {
+	if strings.HasPrefix(url, "/@manage/storages") {
+		return true
+	}
+	if strings.HasPrefix(url, "/api/admin/storage") {
+		return true
+	}
+	if strings.HasPrefix(url, "/api/admin/driver") {
+		return true
+	}
+
+	// str_array := []string{}
+	// for _, element := range str_array {
+	// 	if url == element {
+	// 		return true
+	// 	}
+	// }
+	return false
+}
+
 func AuthAdmin(c *gin.Context) {
 	user := c.MustGet("user").(*model.User)
-	pass := !user.IsGuest() && (strings.HasPrefix(c.Request.URL.Path, "/@manage/storages") || strings.HasPrefix(c.Request.URL.Path, "/storages"))
+	pass := user.IsGeneral() && _genernal_pass(c.Request.URL.Path)
 	if !pass && !user.IsAdmin() {
 		common.ErrorStrResp(c, "You are not an admin", 403)
 		c.Abort()
