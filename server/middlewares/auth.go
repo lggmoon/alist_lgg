@@ -129,6 +129,17 @@ func Authn(c *gin.Context) {
 }
 
 func _genernal_pass(url string) bool {
+	var root = conf.URL.Path
+	var rootlen = len(root)
+	if rootlen > 0 {
+		if root[rootlen-1] == '/' {
+			if rootlen > 1 {
+				url = url[rootlen-1:]
+			}
+		} else {
+			url = url[rootlen:]
+		}
+	}
 	if strings.HasPrefix(url, "/@manage/storages") {
 		return true
 	} else if strings.HasPrefix(url, "/api/admin/storage") {
