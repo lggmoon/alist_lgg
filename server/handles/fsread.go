@@ -155,24 +155,35 @@ type DirResp struct {
 
 func filterDirs(user *model.User, reqPath string, objs []model.Obj) []DirResp {
 	var dirs []DirResp
-	storages, _, err := db.GetStorages_user(user, 1, 1000)
-	if err != nil {
-		log.Infof("filterDirs db.GetStorages_user, %s\n", err.Error())
-		return dirs
-	}
-	for _, obj := range objs {
-		if obj.IsDir() {
-			oname := obj.GetName()
-			opath := reqPath + oname
-			// log.Infof("filterDirs check, %s", opath)
-			// fmt.Printf("filterDirs check, %s\n", opath)
-			for _, sto := range storages {
-				if strings.HasPrefix(opath, sto.MountPath) {
-					dirs = append(dirs, DirResp{
-						Name:     oname,
-						Modified: obj.ModTime(),
-					})
-					break
+	if user.IsAdmin() {
+		for _, obj := range objs {
+			if obj.IsDir() {
+				dirs = append(dirs, DirResp{
+					Name:     obj.GetName(),
+					Modified: obj.ModTime(),
+				})
+			}
+		}
+	} else if user.IsGeneral() {
+		storages, _, err := db.GetStorages_user(user, 1, 1000)
+		if err != nil {
+			log.Infof("filterDirs db.GetStorages_user, %s\n", err.Error())
+			return dirs
+		}
+		for _, obj := range objs {
+			if obj.IsDir() {
+				oname := obj.GetName()
+				opath := reqPath + oname
+				// log.Infof("filterDirs check, %s", opath)
+				// fmt.Printf("filterDirs check, %s\n", opath)
+				for _, sto := range storages {
+					if strings.HasPrefix(opath, sto.MountPath) {
+						dirs = append(dirs, DirResp{
+							Name:     oname,
+							Modified: obj.ModTime(),
+						})
+						break
+					}
 				}
 			}
 		}
