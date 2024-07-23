@@ -131,11 +131,11 @@ func Authn(c *gin.Context) {
 func _genernal_pass(url string) bool {
 	if strings.HasPrefix(url, "/@manage/storages") {
 		return true
-	}
-	if strings.HasPrefix(url, "/api/admin/storage") {
+	} else if strings.HasPrefix(url, "/api/admin/storage") {
 		return true
-	}
-	if strings.HasPrefix(url, "/api/admin/driver") {
+	} else if strings.HasPrefix(url, "/api/admin/driver") {
+		return true
+	} else if strings.HasPrefix(url, "/api/admin/task") {
 		return true
 	}
 

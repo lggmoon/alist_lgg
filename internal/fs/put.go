@@ -3,16 +3,18 @@ package fs
 import (
 	"context"
 	"fmt"
+
 	"github.com/alist-org/alist/v3/internal/driver"
 	"github.com/alist-org/alist/v3/internal/errs"
 	"github.com/alist-org/alist/v3/internal/model"
 	"github.com/alist-org/alist/v3/internal/op"
+	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 	"github.com/xhofe/tache"
 )
 
 type UploadTask struct {
-	tache.Base
+	TaskData
 	storage          driver.Driver
 	dstDirActualPath string
 	file             model.FileStreamer
@@ -33,7 +35,7 @@ func (t *UploadTask) Run() error {
 var UploadTaskManager *tache.Manager[*UploadTask]
 
 // putAsTask add as a put task and return immediately
-func putAsTask(dstDirPath string, file model.FileStreamer) (tache.TaskWithInfo, error) {
+func putAsTask(ctx context.Context, dstDirPath string, file model.FileStreamer) (TaskWithInfo, error) {
 	storage, dstDirActualPath, err := op.GetStorageAndActualPath(dstDirPath)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed get storage")
@@ -53,6 +55,11 @@ func putAsTask(dstDirPath string, file model.FileStreamer) (tache.TaskWithInfo, 
 		storage:          storage,
 		dstDirActualPath: dstDirActualPath,
 		file:             file,
+	}
+	c, ok := ctx.(*gin.Context)
+	if ok {
+		user := c.MustGet("user").(*model.User)
+		t.SetUserID(user.ID)
 	}
 	UploadTaskManager.Add(t)
 	return t, nil

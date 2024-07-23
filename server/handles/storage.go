@@ -2,6 +2,7 @@ package handles
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/alist-org/alist/v3/internal/conf"
@@ -63,9 +64,10 @@ func CreateStorage(c *gin.Context) {
 
 func _check_user_storage(c *gin.Context, id uint) bool {
 	user := c.MustGet("user").(*model.User)
-	if !user.IsGeneral() {
+	if user.IsGeneral() {
 		sto, err := db.GetStorageById_user(user, uint(id))
-		if err == nil || sto.UserID != user.ID {
+		fmt.Printf("_check_user_storage : user.id:%d, storeage.userid:%d\n", sto.UserID, sto.UserID)
+		if err != nil || sto.UserID != user.ID {
 			common.ErrorResp(c, err, 500, true)
 			return false
 		}

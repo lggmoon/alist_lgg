@@ -1,7 +1,6 @@
 package handles
 
 import (
-	"github.com/xhofe/tache"
 	"io"
 	"net/url"
 	stdpath "path"
@@ -58,9 +57,9 @@ func FsStream(c *gin.Context) {
 		Mimetype:     c.GetHeader("Content-Type"),
 		WebPutAsTask: asTask,
 	}
-	var t tache.TaskWithInfo
+	var t fs.TaskWithInfo
 	if asTask {
-		t, err = fs.PutAsTask(dir, s)
+		t, err = fs.PutAsTask(c, dir, s)
 	} else {
 		err = fs.PutDirectly(c, dir, s, true)
 	}
@@ -123,16 +122,16 @@ func FsForm(c *gin.Context) {
 		Mimetype:     file.Header.Get("Content-Type"),
 		WebPutAsTask: asTask,
 	}
-	var t tache.TaskWithInfo
+	var t fs.TaskWithInfo
 	if asTask {
 		s.Reader = struct {
 			io.Reader
 		}{f}
-		t, err = fs.PutAsTask(dir, &s)
+		t, err = fs.PutAsTask(c, dir, &s)
 	} else {
-		ss, err := stream.NewSeekableStream(s, nil)
-		if err != nil {
-			common.ErrorResp(c, err, 500)
+		ss, _err := stream.NewSeekableStream(s, nil)
+		if _err != nil {
+			common.ErrorResp(c, _err, 500)
 			return
 		}
 		err = fs.PutDirectly(c, dir, ss, true)

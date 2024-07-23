@@ -6,6 +6,7 @@ import (
 
 	"github.com/alist-org/alist/v3/internal/conf"
 	"github.com/alist-org/alist/v3/internal/errs"
+	"github.com/alist-org/alist/v3/internal/fs"
 	"github.com/alist-org/alist/v3/internal/setting"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
@@ -13,7 +14,7 @@ import (
 )
 
 type DownloadTask struct {
-	tache.Base
+	fs.TaskData
 	Url          string       `json:"url"`
 	DstDirPath   string       `json:"dst_dir_path"`
 	TempDir      string       `json:"temp_dir"`
@@ -140,12 +141,14 @@ func (t *DownloadTask) Complete() error {
 	// upload files
 	for i := range files {
 		file := files[i]
-		TransferTaskManager.Add(&TransferTask{
+		nt := &TransferTask{
 			file:         file,
 			dstDirPath:   t.DstDirPath,
 			tempDir:      t.TempDir,
 			deletePolicy: t.DeletePolicy,
-		})
+		}
+		nt.SetUserID(t.UserID)
+		TransferTaskManager.Add(nt)
 	}
 	return nil
 }

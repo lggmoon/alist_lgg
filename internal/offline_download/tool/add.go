@@ -6,10 +6,12 @@ import (
 
 	"github.com/alist-org/alist/v3/internal/conf"
 	"github.com/alist-org/alist/v3/internal/errs"
+	"github.com/alist-org/alist/v3/internal/fs"
+	"github.com/alist-org/alist/v3/internal/model"
 	"github.com/alist-org/alist/v3/internal/op"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
-	"github.com/xhofe/tache"
 )
 
 type DeletePolicy string
@@ -28,7 +30,7 @@ type AddURLArgs struct {
 	DeletePolicy DeletePolicy
 }
 
-func AddURL(ctx context.Context, args *AddURLArgs) (tache.TaskWithInfo, error) {
+func AddURL(ctx context.Context, args *AddURLArgs) (fs.TaskWithInfo, error) {
 	// get tool
 	tool, err := Tools.Get(args.Tool)
 	if err != nil {
@@ -77,6 +79,11 @@ func AddURL(ctx context.Context, args *AddURLArgs) (tache.TaskWithInfo, error) {
 		TempDir:      tempDir,
 		DeletePolicy: deletePolicy,
 		tool:         tool,
+	}
+	c, ok := ctx.(*gin.Context)
+	if ok {
+		user := c.MustGet("user").(*model.User)
+		t.SetUserID(user.ID)
 	}
 	DownloadTaskManager.Add(t)
 	return t, nil

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/alist-org/alist/v3/internal/conf"
+	"github.com/alist-org/alist/v3/internal/db"
 	"github.com/alist-org/alist/v3/internal/errs"
 	"github.com/alist-org/alist/v3/internal/fs"
 	"github.com/alist-org/alist/v3/internal/model"
@@ -17,6 +18,7 @@ import (
 	"github.com/alist-org/alist/v3/server/common"
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 )
 
 type ListReq struct {
@@ -142,7 +144,7 @@ func FsDirs(c *gin.Context) {
 		common.ErrorResp(c, err, 500)
 		return
 	}
-	dirs := filterDirs(objs)
+	dirs := filterDirs(user, reqPath, objs)
 	common.SuccessResp(c, dirs)
 }
 
@@ -151,14 +153,28 @@ type DirResp struct {
 	Modified time.Time `json:"modified"`
 }
 
-func filterDirs(objs []model.Obj) []DirResp {
+func filterDirs(user *model.User, reqPath string, objs []model.Obj) []DirResp {
 	var dirs []DirResp
+	storages, _, err := db.GetStorages_user(user, 1, 1000)
+	if err != nil {
+		log.Infof("filterDirs db.GetStorages_user, %s\n", err.Error())
+		return dirs
+	}
 	for _, obj := range objs {
 		if obj.IsDir() {
-			dirs = append(dirs, DirResp{
-				Name:     obj.GetName(),
-				Modified: obj.ModTime(),
-			})
+			oname := obj.GetName()
+			opath := reqPath + oname
+			// log.Infof("filterDirs check, %s", opath)
+			// fmt.Printf("filterDirs check, %s\n", opath)
+			for _, sto := range storages {
+				if strings.HasPrefix(opath, sto.MountPath) {
+					dirs = append(dirs, DirResp{
+						Name:     oname,
+						Modified: obj.ModTime(),
+					})
+					break
+				}
+			}
 		}
 	}
 	return dirs

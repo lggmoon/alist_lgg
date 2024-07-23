@@ -3,20 +3,22 @@ package fs
 import (
 	"context"
 	"fmt"
+	"net/http"
+	stdpath "path"
+
 	"github.com/alist-org/alist/v3/internal/conf"
 	"github.com/alist-org/alist/v3/internal/driver"
 	"github.com/alist-org/alist/v3/internal/model"
 	"github.com/alist-org/alist/v3/internal/op"
 	"github.com/alist-org/alist/v3/internal/stream"
 	"github.com/alist-org/alist/v3/pkg/utils"
+	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
 	"github.com/xhofe/tache"
-	"net/http"
-	stdpath "path"
 )
 
 type CopyTask struct {
-	tache.Base
+	TaskData
 	Status                 string `json:"status"`
 	srcStorage, dstStorage driver.Driver
 	srcObjPath, dstDirPath string
@@ -39,7 +41,7 @@ var CopyTaskManager *tache.Manager[*CopyTask]
 
 // Copy if in the same storage, call move method
 // if not, add copy task
-func _copy(ctx context.Context, srcObjPath, dstDirPath string, lazyCache ...bool) (tache.TaskWithInfo, error) {
+func _copy(ctx context.Context, srcObjPath, dstDirPath string, lazyCache ...bool) (TaskWithInfo, error) {
 	srcStorage, srcObjActualPath, err := op.GetStorageAndActualPath(srcObjPath)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed get src storage")
@@ -84,6 +86,11 @@ func _copy(ctx context.Context, srcObjPath, dstDirPath string, lazyCache ...bool
 		srcObjPath: srcObjActualPath,
 		dstDirPath: dstDirActualPath,
 	}
+	c, ok := ctx.(*gin.Context)
+	if ok {
+		user := c.MustGet("user").(*model.User)
+		t.SetUserID(user.ID)
+	}
 	CopyTaskManager.Add(t)
 	return t, nil
 }
@@ -106,12 +113,14 @@ func copyBetween2Storages(t *CopyTask, srcStorage, dstStorage driver.Driver, src
 			}
 			srcObjPath := stdpath.Join(srcObjPath, obj.GetName())
 			dstObjPath := stdpath.Join(dstDirPath, srcObj.GetName())
-			CopyTaskManager.Add(&CopyTask{
+			ct := &CopyTask{
 				srcStorage: srcStorage,
 				dstStorage: dstStorage,
 				srcObjPath: srcObjPath,
 				dstDirPath: dstObjPath,
-			})
+			}
+			ct.SetUserID(t.GetUserID())
+			CopyTaskManager.Add(ct)
 		}
 		t.Status = "src object is dir, added all copy tasks of objs"
 		return nil

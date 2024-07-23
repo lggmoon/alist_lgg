@@ -2,6 +2,10 @@ package tool
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/alist-org/alist/v3/internal/fs"
 	"github.com/alist-org/alist/v3/internal/model"
 	"github.com/alist-org/alist/v3/internal/op"
 	"github.com/alist-org/alist/v3/internal/stream"
@@ -9,12 +13,10 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/xhofe/tache"
-	"os"
-	"path/filepath"
 )
 
 type TransferTask struct {
-	tache.Base
+	fs.TaskData
 	file         File
 	dstDirPath   string
 	tempDir      string
