@@ -173,11 +173,16 @@ func filterDirs(user *model.User, reqPath string, objs []model.Obj) []DirResp {
 		for _, obj := range objs {
 			if obj.IsDir() {
 				oname := obj.GetName()
-				opath := reqPath + oname
+				var opath string
+				if reqPath == "/" {
+					opath = reqPath + oname
+				} else {
+					opath = reqPath + "/" + oname
+				}
 				// log.Infof("filterDirs check, %s", opath)
-				// fmt.Printf("filterDirs check, %s\n", opath)
 				for _, sto := range storages {
-					if strings.HasPrefix(opath, sto.MountPath) {
+					//fmt.Printf("filterDirs check:%s , storage:%s\n", opath, sto.MountPath)
+					if strings.HasPrefix(opath, sto.MountPath) || strings.HasPrefix(sto.MountPath, opath) {
 						dirs = append(dirs, DirResp{
 							Name:     oname,
 							Modified: obj.ModTime(),
