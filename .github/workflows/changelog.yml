@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - '*'
+      - 'v*'
 
 jobs:
   changelog:
@@ -15,6 +15,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - run: npx changelogithub@0.12 # or changelogithub@0.12 if ensure the stable result
+      - name: Delete beta tag
+        run: git tag -d beta
+        continue-on-error: true
+        run: npx changelogithub@0.12 # or changelogithub@0.12 if ensure the stable result
         env:
           GITHUB_TOKEN: ${{secrets.MY_TOKEN}}
