@@ -1,10 +1,11 @@
 package handles
 
 import (
-	"github.com/alist-org/alist/v3/internal/model"
-	"github.com/alist-org/alist/v3/internal/task"
 	"math"
 	"time"
+
+	"github.com/alist-org/alist/v3/internal/model"
+	"github.com/alist-org/alist/v3/internal/task"
 
 	"github.com/alist-org/alist/v3/internal/fs"
 	"github.com/alist-org/alist/v3/internal/offline_download/tool"
@@ -17,6 +18,7 @@ import (
 type TaskInfo struct {
 	ID          string      `json:"id"`
 	Name        string      `json:"name"`
+	CreatorID   uint        `json:"creator_id"`
 	Creator     string      `json:"creator"`
 	CreatorRole int         `json:"creator_role"`
 	State       tache.State `json:"state"`
@@ -38,15 +40,18 @@ func getTaskInfo[T task.TaskExtensionInfo](task T) TaskInfo {
 	if math.IsNaN(progress) {
 		progress = 100
 	}
+	creatorID := uint(0)
 	creatorName := ""
 	creatorRole := -1
 	if task.GetCreator() != nil {
+		creatorID = task.GetCreator().ID
 		creatorName = task.GetCreator().Username
 		creatorRole = task.GetCreator().Role
 	}
 	return TaskInfo{
 		ID:          task.GetID(),
 		Name:        task.GetName(),
+		CreatorID:   creatorID,
 		Creator:     creatorName,
 		CreatorRole: creatorRole,
 		State:       task.GetState(),
