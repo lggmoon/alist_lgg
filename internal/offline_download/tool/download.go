@@ -6,15 +6,15 @@ import (
 
 	"github.com/alist-org/alist/v3/internal/conf"
 	"github.com/alist-org/alist/v3/internal/errs"
-	"github.com/alist-org/alist/v3/internal/fs"
 	"github.com/alist-org/alist/v3/internal/setting"
+	"github.com/alist-org/alist/v3/internal/task"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/xhofe/tache"
 )
 
 type DownloadTask struct {
-	fs.TaskData
+	task.TaskExtension
 	Url               string       `json:"url"`
 	DstDirPath        string       `json:"dst_dir_path"`
 	TempDir           string       `json:"temp_dir"`
@@ -28,6 +28,9 @@ type DownloadTask struct {
 }
 
 func (t *DownloadTask) Run() error {
+	t.ClearEndTime()
+	t.SetStartTime(time.Now())
+	defer func() { t.SetEndTime(time.Now()) }()
 	if t.tool == nil {
 		tool, err := Tools.Get(t.Toolname)
 		if err != nil {
@@ -80,6 +83,9 @@ outer:
 	if t.tool.Name() == "pikpak" {
 		return nil
 	}
+	if t.tool.Name() == "thunder" {
+		return nil
+	}
 	if t.tool.Name() == "115 Cloud" {
 		// hack for 115
 		<-time.After(time.Second * 1)
@@ -93,6 +99,19 @@ outer:
 	// hack for qBittorrent
 	if t.tool.Name() == "qBittorrent" {
 		seedTime := setting.GetInt(conf.QbittorrentSeedtime, 0)
+		if seedTime >= 0 {
+			t.Status = "offline download completed, waiting for seeding"
+			<-time.After(time.Minute * time.Duration(seedTime))
+			err := t.tool.Remove(t)
+			if err != nil {
+				log.Errorln(err.Error())
+			}
+		}
+	}
+
+	if t.tool.Name() == "transmission" {
+		// hack for transmission
+		seedTime := setting.GetInt(conf.TransmissionSeedtime, 0)
 		if seedTime >= 0 {
 			t.Status = "offline download completed, waiting for seeding"
 			<-time.After(time.Minute * time.Duration(seedTime))
@@ -118,6 +137,7 @@ func (t *DownloadTask) Update() (bool, error) {
 	}
 	t.callStatusRetried = 0
 	t.SetProgress(info.Progress)
+	t.SetTotalBytes(info.TotalBytes)
 	t.Status = fmt.Sprintf("[%s]: %s", t.tool.Name(), info.Status)
 	if info.NewGID != "" {
 		log.Debugf("followen by: %+v", info.NewGID)
@@ -144,6 +164,9 @@ func (t *DownloadTask) Complete() error {
 	if t.tool.Name() == "pikpak" {
 		return nil
 	}
+	if t.tool.Name() == "thunder" {
+		return nil
+	}
 	if t.tool.Name() == "115 Cloud" {
 		return nil
 	}
@@ -158,15 +181,18 @@ func (t *DownloadTask) Complete() error {
 	// upload files
 	for i := range files {
 		file := files[i]
-		nt := &TransferTask{
+		tsk := &TransferTask{
+			TaskExtension: task.TaskExtension{
+				Creator: t.GetCreator(),
+			},
 			file:         file,
 			DstDirPath:   t.DstDirPath,
 			TempDir:      t.TempDir,
 			DeletePolicy: t.DeletePolicy,
 			FileDir:      file.Path,
 		}
-		nt.SetUserID(t.UserID)
-		TransferTaskManager.Add(nt)
+		tsk.SetTotalBytes(file.Size)
+		TransferTaskManager.Add(tsk)
 	}
 	return nil
 }

@@ -2,14 +2,13 @@ package tool
 
 import (
 	"context"
+	"github.com/alist-org/alist/v3/internal/model"
+	"github.com/alist-org/alist/v3/internal/task"
 	"path/filepath"
 
 	"github.com/alist-org/alist/v3/internal/conf"
 	"github.com/alist-org/alist/v3/internal/errs"
-	"github.com/alist-org/alist/v3/internal/fs"
-	"github.com/alist-org/alist/v3/internal/model"
 	"github.com/alist-org/alist/v3/internal/op"
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
@@ -30,7 +29,7 @@ type AddURLArgs struct {
 	DeletePolicy DeletePolicy
 }
 
-func AddURL(ctx context.Context, args *AddURLArgs) (fs.TaskWithInfo, error) {
+func AddURL(ctx context.Context, args *AddURLArgs) (task.TaskExtensionInfo, error) {
 	// get tool
 	tool, err := Tools.Get(args.Tool)
 	if err != nil {
@@ -78,20 +77,23 @@ func AddURL(ctx context.Context, args *AddURLArgs) (fs.TaskWithInfo, error) {
 		tempDir = args.DstDirPath
 		// 防止将下载好的文件删除
 		deletePolicy = DeleteNever
+	case "thunder":
+		tempDir = args.DstDirPath
+		// 防止将下载好的文件删除
+		deletePolicy = DeleteNever
 	}
-	
+
+	taskCreator, _ := ctx.Value("user").(*model.User) // taskCreator is nil when convert failed
 	t := &DownloadTask{
+		TaskExtension: task.TaskExtension{
+			Creator: taskCreator,
+		},
 		Url:          args.URL,
 		DstDirPath:   args.DstDirPath,
 		TempDir:      tempDir,
 		DeletePolicy: deletePolicy,
 		Toolname:     args.Tool,
 		tool:         tool,
-	}
-	c, ok := ctx.(*gin.Context)
-	if ok {
-		user := c.MustGet("user").(*model.User)
-		t.SetUserID(user.ID)
 	}
 	DownloadTaskManager.Add(t)
 	return t, nil
